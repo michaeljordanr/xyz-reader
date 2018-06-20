@@ -7,8 +7,13 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.Loader;
 import android.database.Cursor;
+import android.graphics.Color;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.design.widget.CoordinatorLayout;
+import android.support.design.widget.Snackbar;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.RecyclerView;
@@ -21,6 +26,8 @@ import android.util.TypedValue;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
 import android.widget.TextView;
 
 import com.example.xyzreader.R;
@@ -40,10 +47,9 @@ import java.util.GregorianCalendar;
  * activity presents a grid of items as cards.
  */
 public class ArticleListActivity extends AppCompatActivity implements
-        LoaderManager.LoaderCallbacks<Cursor> {
+        LoaderManager.LoaderCallbacks<Cursor>, SwipeRefreshLayout.OnRefreshListener {
 
     private static final String TAG = ArticleListActivity.class.toString();
-    private Toolbar mToolbar;
     private SwipeRefreshLayout mSwipeRefreshLayout;
     private RecyclerView mRecyclerView;
 
@@ -54,19 +60,19 @@ public class ArticleListActivity extends AppCompatActivity implements
     private GregorianCalendar START_OF_EPOCH = new GregorianCalendar(2,1,1);
 
     CoordinatorLayout coordinatorLayout;
+    private int lastPosition = -1;
+    private Context mContext;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_article_list);
 
-        mToolbar = (Toolbar) findViewById(R.id.toolbar);
-
-
         coordinatorLayout = (CoordinatorLayout) findViewById(R.id
                 .coordinatorLayout);
 
         mSwipeRefreshLayout = (SwipeRefreshLayout) findViewById(R.id.swipe_refresh_layout);
+        mSwipeRefreshLayout.setOnRefreshListener(this);
 
         mRecyclerView = (RecyclerView) findViewById(R.id.recycler_view);
         getLoaderManager().initLoader(0, null, this);
@@ -74,10 +80,32 @@ public class ArticleListActivity extends AppCompatActivity implements
         if (savedInstanceState == null) {
             refresh();
         }
+        mContext = this;
     }
 
     private void refresh() {
+        mIsRefreshing = true;
+        updateRefreshingUI();
+        ConnectivityManager cm = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
+        NetworkInfo ni = cm.getActiveNetworkInfo();
+        if (ni == null || !ni.isConnected()) {
+            showSnackbarError();
+            mIsRefreshing = false;
+            updateRefreshingUI();
+            return;
+        }
         startService(new Intent(this, UpdaterService.class));
+    }
+
+    private void showSnackbarError() {
+        Snackbar snackbar = Snackbar
+                .make(coordinatorLayout, R.string.network_error, Snackbar.LENGTH_LONG);
+        snackbar.setActionTextColor(Color.RED);
+        View snackbarView = snackbar.getView();
+        snackbarView.setBackgroundColor(Color.DKGRAY);
+        TextView textView = (TextView) snackbarView.findViewById(android.support.design.R.id.snackbar_text);
+        textView.setTextColor(getResources().getColor(R.color.colorAccent));
+        snackbar.show();
     }
 
     @Override
@@ -125,9 +153,16 @@ public class ArticleListActivity extends AppCompatActivity implements
         mRecyclerView.setLayoutManager(sglm);
     }
 
+
+
     @Override
     public void onLoaderReset(Loader<Cursor> loader) {
         mRecyclerView.setAdapter(null);
+    }
+
+    @Override
+    public void onRefresh() {
+        refresh();
     }
 
     private class Adapter extends RecyclerView.Adapter<ViewHolder> {
@@ -192,6 +227,21 @@ public class ArticleListActivity extends AppCompatActivity implements
                     mCursor.getString(ArticleLoader.Query.THUMB_URL),
                     ImageLoaderHelper.getInstance(ArticleListActivity.this).getImageLoader());
             holder.thumbnailView.setAspectRatio(mCursor.getFloat(ArticleLoader.Query.ASPECT_RATIO));
+            setAnimation(holder.itemView, position);
+        }
+
+        /**
+         * Here is the key method to apply the animation
+         */
+        private void setAnimation(View viewToAnimate, int position)
+        {
+            // If the bound view wasn't previously displayed on screen, it's animated
+            if (position > lastPosition)
+            {
+                Animation animation = AnimationUtils.loadAnimation(mContext, android.R.anim.slide_in_left);
+                viewToAnimate.startAnimation(animation);
+                lastPosition = position;
+            }
         }
 
         @Override

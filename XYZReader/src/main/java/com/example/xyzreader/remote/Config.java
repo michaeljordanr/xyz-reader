@@ -13,9 +13,8 @@ public class Config {
         URL url = null;
         try {
             url = new URL("https://raw.githubusercontent.com/TNTest/xyzreader/master/data.json" );
-        } catch (MalformedURLException ignored) {
-            // TODO: throw a real error
-            Log.e(TAG, "Please check your internet connection.");
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
         }
 
         BASE_URL = url;
