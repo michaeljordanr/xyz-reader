@@ -14,5 +14,10 @@
     <dimen name="article_detail_elevation">6dp</dimen>
     <dimen name="photo_detail_height">250dp</dimen>
     <dimen name="photo_background_protection_height">112dp</dimen>
+    <dimen name="back_button_width">56dp</dimen>
+    <dimen name="app_bar_elevation">4dp</dimen>
+    <dimen name="card_view_margin">4dp</dimen>
+    <dimen name="article_title_padding">16dp</dimen>
+    <dimen name="article_subtitle_padding">16dp</dimen>
 
 </resources>
